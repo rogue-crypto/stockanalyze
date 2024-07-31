@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axios</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f4f7f9;
+            color: #000;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        h1, h2, label {
+            font-weight: 700;
+            color: #000;
+        }
+        .navbar {
+            background-color: #004080;
+            color: white;
+        }
+        .navbar h1 {
+            color: white;
+        }
+        .navbar a {
+            color: white;
+            padding: 14px 20px;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+        .navbar a:hover {
+            background-color: #003366;
+        }
+        .navbar a:active {
+            background-color: #002b5e;
+            transform: scale(0.95);
+        }
+        .button-primary {
+            background-color: #004080;
+            color: white;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            border-radius: 4px;
+            padding: 8px 16px;
+            cursor: pointer;
+        }
+        .button-primary:hover {
+            background-color: #002b5e;
+            transform: scale(1.05);
+        }
+        .button-primary:disabled {
+            background-color: grey;
+            cursor: not-allowed;
+        }
+        .stock-card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 16px;
+            margin: 16px;
+            width: 300px;
+            text-align: center;
+            cursor: pointer;
+        }
+        .header {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        .subheader {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        .form-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+        .input {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-right: 8px;
+            flex-grow: 1;
+        }
+        .footer {
+            background-color: #000;
+            color: white;
+            text-align: center;
+            padding: 16px;
+            margin-top: auto;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <header class="navbar py-6 shadow-lg">
+        <div class="container mx-auto px-4 flex justify-between items-center">
+            <h1 class="text-3xl font-bold">Axios</h1>
+            <nav>
+                <a href="#home" class="hover:bg-blue-700">Home</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8 flex-grow">
+        <section id="home" class="text-center mb-12">
+            <h2 class="header">Welcome to Axios</h2>
+            <p class="text-lg mb-6">Personalized stock predictions for better investment decisions.</p>
+            <div class="form-container">
+                <input type="text" id="symbol" name="symbol" placeholder="Enter Stock Symbol" class="input" required>
+                <button id="getStock" class="button-primary">
+                    <span class="icon">🔍</span> Predict
+                </button>
+            </div>
+        </section>
+
+        <section id="stock-result" class="hidden flex flex-wrap justify-center mb-12">
+        </section>
+
+        <section id="most-profitable-stocks" class="mt-8">
+            <h2 class="subheader text-center">Most Profitable Stocks</h2>
+            <div id="profitable-stocks-container" class="flex flex-wrap justify-center">
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2024 Axios. All rights reserved.</p>
+    </footer>
+
+    <script>
+        document.getElementById('getStock').addEventListener('click', async function() {
+            const symbol = document.getElementById('symbol').value.trim().toUpperCase();
+            if (!symbol) {
+                alert('Please enter a stock symbol.');
+                return;
+            }
+
+            const getStockButton = document.getElementById('getStock');
+            getStockButton.disabled = true;
+
+            try {
+                const response = await fetch(`/search?symbol=${encodeURIComponent(symbol)}`);
+                const data = await response.json();
+
+                if (data.symbol) {
+                    const resultDiv = document.getElementById('stock-result');
+                    resultDiv.classList.remove('hidden');
+                    resultDiv.innerHTML = `
+                        <div class="stock-card" onclick="window.location.href='/stock_info/${data.symbol}'">
+                            <h3 class="text-xl font-bold">${data.symbol}</h3>
+                            <img src="data:image/png;base64,${data.plot}" alt="Stock Prediction Graph" />
+                            <p class="mt-2">Predicted Profit: ${data.predicted_profit}</p>
+                            <p>Time to Buy: ${data.time_to_buy}</p>
+                            <p>Time to Sell: ${data.time_to_sell}</p>
+                        </div>`;
+                } else {
+                    throw new Error('No data returned from API');
+                }
+            } catch (error) {
+                console.error('Error fetching stock data:', error);
+                alert('Failed to fetch stock data. Please try again.');
+            } finally {
+                getStockButton.disabled = false;
+            }
+        });
+
+        async function fetchMostProfitableStocks() {
+            try {
+                const response = await fetch('/most_profitable_stocks');
+                const data = await response.json();
+
+                const container = document.getElementById('profitable-stocks-container');
+                container.innerHTML = '';
+
+                data.forEach(stock => {
+                    const stockCard = `
+                        <div class="stock-card" onclick="window.location.href='/stock_info/${stock.symbol}'">
+                            <h3 class="text-xl font-bold">${stock.symbol}</h3>
+                            <img src="data:image/png;base64,${stock.plot}" alt="Stock Prediction Graph" />
+                            <p class="mt-2">Predicted Profit: ${stock.predicted_profit}</p>
+                            <p>Time to Buy: ${stock.time_to_buy}</p>
+                            <p>Time to Sell: ${stock.time_to_sell}</p>
+                        </div>`;
+                    container.innerHTML += stockCard;
+                });
+            } catch (error) {
+                console.error('Error fetching most profitable stocks:', error);
+                alert('Failed to fetch most profitable stocks. Please try again.');
+            }
+        }
+
+        // Fetch most profitable stocks on page load
+        fetchMostProfitableStocks();
+    </script>
+</body>
+</html>
